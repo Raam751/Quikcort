@@ -1,10 +1,13 @@
 const { v4: uuidv4 } = require('uuid');
+const axios = require('axios');
 const Case = require('../models/Case');
 const User = require('../models/User');
 const Submission = require('../models/Submission');
 const Verdict = require('../models/Verdict');
 const { asyncHandler } = require('../middlewares/errorHandler');
 const { generateVerdict } = require('../utils/geminiService');
+
+
 
 // @desc    Create a new case
 // @route   POST /api/cases
@@ -32,7 +35,7 @@ const createCase = asyncHandler(async (req, res) => {
   // Generate unique case ID and invitation token
   const caseId = `QC-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
   const invitationToken = uuidv4();
-  
+
   // Set invitation expiry (7 days from now)
   const invitationExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
@@ -50,6 +53,10 @@ const createCase = asyncHandler(async (req, res) => {
     invitationExpiry,
     deadline: new Date(deadline)
   });
+
+
+
+  await newCase.save();
 
   // Populate the case with user details
   await newCase.populate([
@@ -237,7 +244,7 @@ const cancelCase = asyncHandler(async (req, res) => {
   if (!req.isCreator) {
     return res.status(403).json({
       success: false,
-     message: 'Only the case creator can cancel the case'
+      message: 'Only the case creator can cancel the case'
     });
   }
 
@@ -301,12 +308,14 @@ const submitClaim = asyncHandler(async (req, res) => {
 
   // Check if both parties have submitted
   if (req.case.areBothPartiesSubmitted()) {
+    console.log(`Both parties submitted for case ${req.case._id}. Generating verdict...`);
     req.case.status = 'submitted';
     await req.case.save();
 
     // Generate verdict using AI
     try {
       const verdict = await generateVerdict(req.case._id);
+      console.log(`Verdict generated successfully for case ${req.case._id}`);
       req.case.verdict = verdict._id;
       req.case.status = 'resolved';
       await req.case.save();
@@ -314,7 +323,7 @@ const submitClaim = asyncHandler(async (req, res) => {
       // Update user statistics
       await updateUserStats(verdict);
     } catch (error) {
-      console.error('Error generating verdict:', error);
+      console.error(`Error generating verdict for case ${req.case._id}:`, error);
       // Case remains in 'submitted' status if verdict generation fails
     }
   }
@@ -388,6 +397,46 @@ const updateUserStats = async (verdict) => {
   }
 };
 
+// @desc    Retry verdict generation
+// @route   POST /api/cases/:caseId/retry-verdict
+// @access  Private
+const retryVerdict = asyncHandler(async (req, res) => {
+  // Check if case is in submitted status
+  if (req.case.status !== 'submitted') {
+    return res.status(400).json({
+      success: false,
+      message: 'Verdict generation can only be retried for submitted cases'
+    });
+  }
+
+  console.log(`Retrying verdict generation for case ${req.case._id}...`);
+
+  try {
+    const verdict = await generateVerdict(req.case._id);
+    console.log(`Verdict generated successfully for case ${req.case._id}`);
+
+    req.case.verdict = verdict._id;
+    req.case.status = 'resolved';
+    await req.case.save();
+
+    // Update user statistics
+    await updateUserStats(verdict);
+
+    res.status(200).json({
+      success: true,
+      message: 'Verdict generated successfully',
+      data: { verdict }
+    });
+  } catch (error) {
+    console.error(`Error generating verdict for case ${req.case._id}:`, error);
+    res.status(500).json({
+      success: false,
+      message: `Failed to generate verdict: ${error.message}`,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
 module.exports = {
   createCase,
   joinCase,
@@ -396,5 +445,6 @@ module.exports = {
   updateCase,
   cancelCase,
   submitClaim,
-  appealVerdict
+  appealVerdict,
+  retryVerdict
 };

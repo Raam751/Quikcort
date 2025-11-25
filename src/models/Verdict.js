@@ -82,6 +82,11 @@ const verdictSchema = new mongoose.Schema({
     default: 'gemini-pro',
     trim: true
   },
+  excuse: {
+    type: String,
+    trim: true,
+    maxlength: 1000
+  },
   processingTime: {
     type: Number, // in milliseconds
     required: true

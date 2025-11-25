@@ -83,12 +83,12 @@ const getVerdictStats = asyncHandler(async (req, res) => {
   const verdictsAsWinner = await Verdict.find({ winner: userId }).select('confidenceScore');
   const verdictsAsLoser = await Verdict.find({ loser: userId }).select('confidenceScore');
 
-  const avgConfidenceWhenWon = verdictsAsWinner.length > 0 
-    ? verdictsAsWinner.reduce((sum, v) => sum + v.confidenceScore, 0) / verdictsAsWinner.length 
+  const avgConfidenceWhenWon = verdictsAsWinner.length > 0
+    ? verdictsAsWinner.reduce((sum, v) => sum + v.confidenceScore, 0) / verdictsAsWinner.length
     : 0;
 
-  const avgConfidenceWhenLost = verdictsAsLoser.length > 0 
-    ? verdictsAsLoser.reduce((sum, v) => sum + v.confidenceScore, 0) / verdictsAsLoser.length 
+  const avgConfidenceWhenLost = verdictsAsLoser.length > 0
+    ? verdictsAsLoser.reduce((sum, v) => sum + v.confidenceScore, 0) / verdictsAsLoser.length
     : 0;
 
   // Get recent verdicts (last 30 days)
@@ -98,10 +98,14 @@ const getVerdictStats = asyncHandler(async (req, res) => {
     generatedAt: { $gte: thirtyDaysAgo }
   });
 
+  // Get user details for credibility score
+  const user = await require('../models/User').findById(userId);
+
   const stats = {
-    totalVerdicts,
-    wonVerdicts,
-    lostVerdicts,
+    totalCases: totalVerdicts,
+    wonCases: wonVerdicts,
+    lostCases: lostVerdicts,
+    credibilityScore: user ? user.credibilityScore : 0,
     winRate: totalVerdicts > 0 ? (wonVerdicts / totalVerdicts * 100).toFixed(1) : 0,
     avgConfidenceWhenWon: avgConfidenceWhenWon.toFixed(1),
     avgConfidenceWhenLost: avgConfidenceWhenLost.toFixed(1),
@@ -132,8 +136,8 @@ const getVerdictDetails = asyncHandler(async (req, res) => {
 
   // Check if user has access to this verdict
   const caseDoc = await Case.findById(verdict.case._id);
-  const hasAccess = caseDoc.creator.toString() === req.user._id.toString() || 
-                   caseDoc.opposingParty.toString() === req.user._id.toString();
+  const hasAccess = caseDoc.creator.toString() === req.user._id.toString() ||
+    caseDoc.opposingParty.toString() === req.user._id.toString();
 
   if (!hasAccess) {
     return res.status(403).json({
@@ -163,8 +167,8 @@ const finalizeVerdict = asyncHandler(async (req, res) => {
 
   // Check if user has permission to finalize (only case participants)
   const caseDoc = await Case.findById(verdict.case);
-  const hasPermission = caseDoc.creator.toString() === req.user._id.toString() || 
-                       caseDoc.opposingParty.toString() === req.user._id.toString();
+  const hasPermission = caseDoc.creator.toString() === req.user._id.toString() ||
+    caseDoc.opposingParty.toString() === req.user._id.toString();
 
   if (!hasPermission) {
     return res.status(403).json({

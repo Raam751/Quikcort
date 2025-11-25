@@ -4,8 +4,7 @@ const submissionSchema = new mongoose.Schema({
   case: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Case',
-    required: true,
-    index: true
+    required: true
   },
   submitter: {
     type: mongoose.Schema.Types.ObjectId,

@@ -79,6 +79,11 @@ const caseSchema = new mongoose.Schema({
     type: String,
     trim: true,
     maxlength: 500
+  },
+  summary: {
+    type: String,
+    trim: true,
+    maxlength: 1000
   }
 }, {
   timestamps: true
@@ -89,32 +94,32 @@ caseSchema.index({ creator: 1, status: 1 });
 caseSchema.index({ opposingParty: 1, status: 1 });
 
 // Virtual for checking if case is expired
-caseSchema.virtual('isExpired').get(function() {
+caseSchema.virtual('isExpired').get(function () {
   return new Date() > this.deadline;
 });
 
 // Virtual for checking if invitation is expired
-caseSchema.virtual('isInvitationExpired').get(function() {
+caseSchema.virtual('isInvitationExpired').get(function () {
   return new Date() > this.invitationExpiry;
 });
 
 // Method to check if user can submit
-caseSchema.methods.canUserSubmit = function(userId) {
+caseSchema.methods.canUserSubmit = function (userId) {
   if (this.status !== 'active') return false;
   if (this.isExpired) return false;
-  return this.creator.toString() === userId.toString() || 
-         this.opposingParty.toString() === userId.toString();
+  return this.creator.toString() === userId.toString() ||
+    this.opposingParty.toString() === userId.toString();
 };
 
 // Method to check if both parties have submitted
-caseSchema.methods.areBothPartiesSubmitted = function() {
+caseSchema.methods.areBothPartiesSubmitted = function () {
   return this.submissions && this.submissions.length >= 2;
 };
 
 // Ensure virtual fields are serialized
 caseSchema.set('toJSON', {
   virtuals: true,
-  transform: function(doc, ret) {
+  transform: function (doc, ret) {
     delete ret.__v;
     return ret;
   }

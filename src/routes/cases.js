@@ -8,7 +8,8 @@ const {
   updateCase,
   cancelCase,
   submitClaim,
-  appealVerdict
+  appealVerdict,
+  retryVerdict
 } = require('../controllers/caseController');
 const { protect, canAccessCase } = require('../middlewares/auth');
 const {
@@ -33,5 +34,6 @@ router.delete('/:caseId', validateCaseId, canAccessCase, cancelCase);
 router.post('/join/:token', joinCase);
 router.post('/:caseId/submit', validateCaseId, canAccessCase, validateSubmission, submitClaim);
 router.post('/:caseId/appeal', validateCaseId, canAccessCase, validateAppeal, appealVerdict);
+router.post('/:caseId/retry-verdict', validateCaseId, canAccessCase, retryVerdict);
 
 module.exports = router;

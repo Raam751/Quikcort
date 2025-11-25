@@ -4,7 +4,7 @@ const Submission = require('../models/Submission');
 const Verdict = require('../models/Verdict');
 
 // Gemini API configuration
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 const API_KEY = process.env.GEMINI_API_KEY;
 
 // Generate verdict using Gemini AI
@@ -31,7 +31,7 @@ const generateVerdict = async (caseId) => {
     // Prepare the prompt for Gemini
     const prompt = createVerdictPrompt(caseDoc);
 
-    // Call Gemini API
+    // Ensure the API call explicitly requests structured JSON output
     const response = await axios.post(
       `${GEMINI_API_URL}?key=${API_KEY}`,
       {
@@ -55,11 +55,14 @@ const generateVerdict = async (caseId) => {
       }
     );
 
+    // Validate the response structure
     if (!response.data || !response.data.candidates || !response.data.candidates[0]) {
       throw new Error('Invalid response from Gemini API');
     }
 
     const aiResponse = response.data.candidates[0].content.parts[0].text;
+
+    // Parse the JSON response and handle errors
     const verdictData = parseVerdictResponse(aiResponse, caseDoc);
 
     const processingTime = Date.now() - startTime;
@@ -148,7 +151,8 @@ RESPOND IN THIS EXACT JSON FORMAT:
     "currency": "USD",
     "type": "monetary/apology/action/none",
     "description": "explanation of compensation"
-  }
+  },
+  "excuse": "a polite, slightly humorous, or consoling excuse for the losing party to save face (e.g., 'The stars just weren't aligned for you today', 'Mercury was in retrograde', etc.)"
 }
 
 Be fair, objective, and thorough in your analysis. Consider all available information and provide a well-reasoned decision.
@@ -188,7 +192,8 @@ const parseVerdictResponse = (aiResponse, caseDoc) => {
         currency: verdictData.compensation?.currency || 'USD',
         type: verdictData.compensation?.type || 'none',
         description: verdictData.compensation?.description || ''
-      }
+      },
+      excuse: verdictData.excuse || 'Better luck next time!'
     };
 
   } catch (error) {
@@ -200,14 +205,14 @@ const parseVerdictResponse = (aiResponse, caseDoc) => {
 // Retry verdict generation with exponential backoff
 const generateVerdictWithRetry = async (caseId, maxRetries = 3) => {
   let lastError;
-  
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       return await generateVerdict(caseId);
     } catch (error) {
       lastError = error;
       console.error(`Verdict generation attempt ${attempt} failed:`, error.message);
-      
+
       if (attempt < maxRetries) {
         const delay = Math.pow(2, attempt) * 1000; // Exponential backoff
         console.log(`Retrying in ${delay}ms...`);
@@ -215,7 +220,7 @@ const generateVerdictWithRetry = async (caseId, maxRetries = 3) => {
       }
     }
   }
-  
+
   throw lastError;
 };
 

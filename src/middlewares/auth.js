@@ -26,10 +26,10 @@ const protect = async (req, res, next) => {
     try {
       // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      
+
       // Get user from token
       const user = await User.findById(decoded.id).select('-password');
-      
+
       if (!user) {
         return res.status(401).json({
           success: false,
@@ -124,7 +124,7 @@ const canAccessCase = async (req, res, next) => {
   try {
     const Case = require('../models/Case');
     const caseId = req.params.caseId || req.params.id;
-    
+
     if (!caseId) {
       return res.status(400).json({
         success: false,
@@ -133,13 +133,16 @@ const canAccessCase = async (req, res, next) => {
     }
 
     const caseDoc = await Case.findById(caseId);
-    
+
     if (!caseDoc) {
+      console.log(`Debug: Case not found for ID: ${caseId}`);
       return res.status(404).json({
         success: false,
         message: 'Case not found.'
       });
     }
+
+    console.log(`Debug: Case found: ${caseDoc._id}, Creator: ${caseDoc.creator}, Opposing: ${caseDoc.opposingParty}, User: ${req.user._id}`);
 
     // Check if user is creator or opposing party
     const isCreator = caseDoc.creator.toString() === req.user._id.toString();
