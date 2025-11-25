@@ -112,38 +112,38 @@ const verdictSchema = new mongoose.Schema({
 });
 
 // Index for efficient queries
-verdictSchema.index({ case: 1 });
+
 verdictSchema.index({ winner: 1 });
 verdictSchema.index({ loser: 1 });
 verdictSchema.index({ generatedAt: -1 });
 
 // Virtual for checking if appeal period has expired
-verdictSchema.virtual('isAppealExpired').get(function() {
+verdictSchema.virtual('isAppealExpired').get(function () {
   return new Date() > this.appealDeadline;
 });
 
 // Virtual for confidence level
-verdictSchema.virtual('confidenceLevel').get(function() {
+verdictSchema.virtual('confidenceLevel').get(function () {
   if (this.confidenceScore >= 80) return 'high';
   if (this.confidenceScore >= 60) return 'medium';
   return 'low';
 });
 
 // Method to check if user can appeal
-verdictSchema.methods.canUserAppeal = function(userId) {
+verdictSchema.methods.canUserAppeal = function (userId) {
   if (this.isFinal) return false;
   if (this.isAppealExpired) return false;
   return this.loser.toString() === userId.toString();
 };
 
 // Method to mark as appealed
-verdictSchema.methods.markAsAppealed = function() {
+verdictSchema.methods.markAsAppealed = function () {
   this.isAppealed = true;
   return this.save();
 };
 
 // Method to mark as final
-verdictSchema.methods.markAsFinal = function() {
+verdictSchema.methods.markAsFinal = function () {
   this.isFinal = true;
   return this.save();
 };
@@ -151,7 +151,7 @@ verdictSchema.methods.markAsFinal = function() {
 // Ensure virtual fields are serialized
 verdictSchema.set('toJSON', {
   virtuals: true,
-  transform: function(doc, ret) {
+  transform: function (doc, ret) {
     delete ret.__v;
     return ret;
   }
