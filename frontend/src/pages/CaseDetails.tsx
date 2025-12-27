@@ -37,6 +37,12 @@ interface CaseData {
     lastName: string;
   };
   verdict?: Verdict;
+  submissions?: {
+    _id: string;
+    submitter: string;
+    claim: string;
+    createdAt: string;
+  }[];
 }
 
 const CaseDetails = () => {
@@ -289,7 +295,14 @@ const CaseDetails = () => {
                   ? "Waiting for the opposing party to join the case."
                   : caseData.status === 'submitted'
                     ? "Both parties have submitted their claims. The AI is currently analyzing the evidence."
-                    : "Waiting for both parties to submit their claims."}
+                    : (() => {
+                      // Check if current user has submitted
+                      const hasUserSubmitted = caseData.submissions?.some(s => s.submitter === user?._id);
+                      if (hasUserSubmitted) {
+                        return "You have submitted your statement. Waiting for the other party to submit theirs.";
+                      }
+                      return "Please submit your statement below to proceed with the case.";
+                    })()}
               </p>
 
               {caseData.status === 'submitted' && (
@@ -316,7 +329,7 @@ const CaseDetails = () => {
             </div>
 
             {/* Submission Form */}
-            {caseData.status === 'active' && (
+            {caseData.status === 'active' && !caseData.submissions?.some(s => s.submitter === user?._id) && (
               <div className="bg-white dark:bg-secondary-800 p-8 rounded-xl shadow-card border border-secondary-100 dark:border-secondary-700 transition-colors">
                 <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-6">Submit Your Statement</h3>
                 <form onSubmit={handleSubmission} className="space-y-6">
