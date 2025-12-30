@@ -1,27 +1,19 @@
 require('dotenv').config();
 const axios = require('axios');
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 const API_KEY = process.env.GEMINI_API_KEY;
 
-async function testGemini() {
+async function listModels() {
     if (!API_KEY) {
         console.error('❌ Error: GEMINI_API_KEY is missing in .env file');
         process.exit(1);
     }
 
-    console.log('Testing Gemini API key...');
+    console.log('Listing available models...');
 
     try {
-        const response = await axios.post(
-            `${GEMINI_API_URL}?key=${API_KEY}`,
-            {
-                contents: [{
-                    parts: [{
-                        text: "Hello, are you working?"
-                    }]
-                }]
-            },
+        const response = await axios.get(
+            `https://generativelanguage.googleapis.com/v1beta/models?key=${API_KEY}`,
             {
                 headers: { 'Content-Type': 'application/json' },
                 timeout: 10000
@@ -30,9 +22,13 @@ async function testGemini() {
 
         if (response.status === 200) {
             console.log('✅ Success! API Key is valid.');
-            console.log('Response:', response.data.candidates[0].content.parts[0].text);
-        } else {
-            console.log(`⚠️ Unexpected status code: ${response.status}`);
+            console.log('Available Models:');
+            const models = response.data.models || [];
+            models.forEach(m => {
+                if (m.name.includes('gemini')) {
+                    console.log(`- ${m.name} (${m.supportedGenerationMethods.join(', ')})`);
+                }
+            });
         }
     } catch (error) {
         console.error('❌ API Call Failed:');
@@ -45,4 +41,4 @@ async function testGemini() {
     }
 }
 
-testGemini();
+listModels();
