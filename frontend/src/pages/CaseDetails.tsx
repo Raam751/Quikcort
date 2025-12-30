@@ -43,6 +43,7 @@ interface CaseData {
     claim: string;
     createdAt: string;
   }[];
+  invitationToken: string;
 }
 
 const CaseDetails = () => {
@@ -80,13 +81,33 @@ const CaseDetails = () => {
       await casesAPI.submitClaim(caseId, { claim });
       setClaim('');
       alert('Claim submitted successfully! You will be notified when the verdict is ready.');
-      navigate('/dashboard');
+      // Refresh case data
+      const response = await casesAPI.getCase(caseId);
+      setCaseData(response.data.data.case);
     } catch (error: any) {
       console.error('Error submitting claim:', error);
       const errorMessage = error.response?.data?.errors?.[0]?.message || error.response?.data?.message || 'Failed to submit claim';
       alert(errorMessage);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleJoinCase = async () => {
+    if (!caseData?.invitationToken) return;
+
+    setLoading(true);
+    try {
+      await casesAPI.joinCase(caseData.invitationToken);
+      // Refresh case data
+      const response = await casesAPI.getCase(caseId!);
+      setCaseData(response.data.data.case);
+      alert('You have accepted the case. You can now submit your statement.');
+    } catch (error: any) {
+      console.error('Error joining case:', error);
+      alert(error.response?.data?.message || 'Failed to join case');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -292,7 +313,9 @@ const CaseDetails = () => {
               <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">Verdict Pending</h3>
               <p className="text-secondary-600 dark:text-secondary-300 mb-6 max-w-lg mx-auto">
                 {caseData.status === 'pending'
-                  ? "Waiting for the opposing party to join the case."
+                  ? (caseData.opposingParty._id === user?._id
+                    ? "You have been invited to this case. Please accept it to proceed."
+                    : "Waiting for the opposing party to join the case.")
                   : caseData.status === 'submitted'
                     ? "Both parties have submitted their claims. The AI is currently analyzing the evidence."
                     : (() => {
@@ -324,6 +347,15 @@ const CaseDetails = () => {
                   className="px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium shadow-sm transition-all"
                 >
                   Retry Verdict Generation
+                </button>
+              )}
+
+              {caseData.status === 'pending' && caseData.opposingParty._id === user?._id && (
+                <button
+                  onClick={handleJoinCase}
+                  className="px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium shadow-sm transition-all"
+                >
+                  Accept Case
                 </button>
               )}
             </div>
