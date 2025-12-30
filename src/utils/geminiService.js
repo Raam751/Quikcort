@@ -4,7 +4,8 @@ const Submission = require('../models/Submission');
 const Verdict = require('../models/Verdict');
 
 // Gemini API configuration
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent';
+const model = process.env.GEMINI_MODEL || 'gemini-flash-latest';
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 const API_KEY = process.env.GEMINI_API_KEY;
 
 // Generate verdict using Gemini AI
