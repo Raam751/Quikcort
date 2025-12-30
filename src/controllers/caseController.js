@@ -5,7 +5,8 @@ const User = require('../models/User');
 const Submission = require('../models/Submission');
 const Verdict = require('../models/Verdict');
 const { asyncHandler } = require('../middlewares/errorHandler');
-const { generateVerdict } = require('../utils/geminiService');
+const { asyncHandler } = require('../middlewares/errorHandler');
+const { generateVerdict, generateVerdictWithRetry } = require('../utils/geminiService');
 
 
 
@@ -56,6 +57,19 @@ const createCase = asyncHandler(async (req, res) => {
 
 
 
+  await newCase.save();
+
+  // Create initial submission for creator
+  const creatorSubmission = await Submission.create({
+    case: newCase._id,
+    submitter: req.user._id,
+    claim: description, // Use case description as the claim
+    evidence: [],
+    isCreator: true
+  });
+
+  // Add submission to case
+  newCase.submissions.push(creatorSubmission._id);
   await newCase.save();
 
   // Populate the case with user details
@@ -314,7 +328,7 @@ const submitClaim = asyncHandler(async (req, res) => {
 
     // Generate verdict using AI
     try {
-      const verdict = await generateVerdict(req.case._id);
+      const verdict = await generateVerdictWithRetry(req.case._id);
       console.log(`Verdict generated successfully for case ${req.case._id}`);
       req.case.verdict = verdict._id;
       req.case.status = 'resolved';
@@ -412,7 +426,7 @@ const retryVerdict = asyncHandler(async (req, res) => {
   console.log(`Retrying verdict generation for case ${req.case._id}...`);
 
   try {
-    const verdict = await generateVerdict(req.case._id);
+    const verdict = await generateVerdictWithRetry(req.case._id);
     console.log(`Verdict generated successfully for case ${req.case._id}`);
 
     req.case.verdict = verdict._id;
