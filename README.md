@@ -25,7 +25,7 @@ The emphasis of the project is on **clean backend structure**, **service-layer s
 * Node.js
 * Express.js
 * REST APIs
-* Database: *(replace with MongoDB / PostgreSQL / MySQL — whichever you used)*
+* Database: MongoDB
 
 ---
 
